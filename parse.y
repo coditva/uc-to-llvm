@@ -9,7 +9,7 @@ extern FILE *yyin;
 %}
 
 %union {
-    int             num;
+    unsigned int    num;
     struct Symbol   *sym;
 }
 

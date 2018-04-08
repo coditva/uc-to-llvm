@@ -70,5 +70,15 @@ static int install_id()
 
 static int install_int()
 {
-    return INT8;
+	sscanf(yytext, "%u", &yylval.num);
+
+	if (yylval.num < 128) {
+		return INT8;
+    }
+
+	if (yylval.num < 32368) {
+		return INT16;
+    }
+
+	return INT32;
 }
