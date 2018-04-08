@@ -181,6 +181,9 @@ int main(int argc, char *argv[])
 
         LLVMDumpModule(module);
 
+        LLVMDisposeBuilder(builder);
+        LLVMDisposeModule(module);
+
         /* destroy the symbol table */
         symbol_destroy();
     } else {
