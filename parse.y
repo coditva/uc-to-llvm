@@ -111,8 +111,11 @@ expression      : ID '=' expression
                 | expression OR  expression
                 | expression AN  expression
                 | expression '|' expression
+                    { $$ = LLVMBuildOr(builder, $1, $3, "or"); }
                 | expression '^' expression
+                    { $$ = LLVMBuildXor(builder, $1, $3, "xor"); }
                 | expression '&' expression
+                    { $$ = LLVMBuildAnd(builder, $1, $3, "and"); }
                 | expression EQ  expression
                 | expression NE  expression
                 | expression '<' expression
@@ -124,14 +127,23 @@ expression      : ID '=' expression
                 | expression '+' expression
                     { $$ = LLVMBuildAdd(builder, $1, $3, "add"); }
                 | expression '-' expression
+                    { $$ = LLVMBuildSub(builder, $1, $3, "sub"); }
                 | expression '*' expression
+                    { $$ = LLVMBuildMul(builder, $1, $3, "mul"); }
                 | expression '/' expression
+                    { $$ = LLVMBuildUDiv(builder, $1, $3, "div"); }
                 | expression '%' expression
+                    { $$ = LLVMBuildURem(builder, $1, $3, "rem"); }
                 | '!' expression
+                    { $$ = LLVMBuildNot(builder, $2, "not"); }
                 | '~' expression
+                    { $$ = LLVMBuildNot(builder, $2, "not"); }
                 | '+' expression %prec '!' /* '+' at same precedence level as '!' */
+                    { $$ = $2; }
                 | '-' expression %prec '!' /* '-' at same precedence level as '!' */
+                    { $$ = LLVMBuildNeg(builder, $2, "neg"); }
                 | '(' expression ')'
+                    { $$ = $2; }
                 | '$' INT8
                     { $$ = LLVMBuildAlloca(builder, LLVMInt32Type(), "var"); }
                 | PP ID
@@ -175,17 +187,18 @@ int main(int argc, char *argv[])
         builder = LLVMCreateBuilder();
         LLVMPositionBuilderAtEnd(builder, basic_block);
 
-        /* add instructions */
         /* begin parsing */
         yyparse();
 
         LLVMDumpModule(module);
 
+        /* cleanup llvm */
         LLVMDisposeBuilder(builder);
         LLVMDisposeModule(module);
 
         /* destroy the symbol table */
         symbol_destroy();
+
     } else {
         fprintf(stderr, "Usage: %s FILENAME\n", argv[0]);
         return 1;
