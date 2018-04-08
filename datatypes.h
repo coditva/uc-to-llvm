@@ -12,14 +12,4 @@ struct Symbol
 	int  localvar;
 };
 
-
-/**
- * Enum of all error codes
- */
-typedef enum {
-    E_NONE,
-    E_INCOMPLETE,
-    E_LEX,
-} ErrorCode;
-
 #endif /* end of include guard: DATATYPES_H */

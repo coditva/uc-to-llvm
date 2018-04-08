@@ -5,7 +5,7 @@ binary="./uc"
 exitcode=0
 
 function run_test() {
-    $binary < $testdir/$1 1>/dev/null 2>&1
+    $binary "$testdir/$1" 1>/dev/null 2>&1
     if [ $? -eq 0 ]; then
         echo "[PASS] $1"
     else

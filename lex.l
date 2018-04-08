@@ -1,7 +1,6 @@
 %{
 #include "datatypes.h"
 #include "y.tab.h"
-#include "util.h"
 #include "symbol.h"
 
 static int install_id();
@@ -23,6 +22,8 @@ token           [!$%&()*+,\-./:;<=>?\[\]^{|}~]
 %%
 
 [ \t\v\n\f\r]   /* skip whitespace */
+
+    /*"//".*[\n]      [> skip comments <]*/
 
 {id}    		{ return install_id(); }
 {int}   		{ return install_int(); }

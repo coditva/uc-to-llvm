@@ -1,10 +1,11 @@
 %{
 #include <stdio.h>
-#include "util.h"
+#include <stdlib.h>
 #include "symbol.h"
 
 extern int yylex();
 extern int yyerror(char *);
+extern FILE *yyin;
 %}
 
 %union {
@@ -138,13 +139,22 @@ expression      : ID '=' expression
 
 int main(int argc, char *argv[])
 {
-    symbol_init();
-    yyparse();
-    symbol_destroy();
+    if (argc > 1) {
+        if (!(yyin = fopen(argv[1], "r"))) {
+            fprintf(stderr, "Error: %s\n", "Cannot open file");
+            return 1;
+        }
+        symbol_init();
+        yyparse();
+        symbol_destroy();
+    } else {
+        fprintf(stderr, "Usage: %s FILENAME\n", argv[0]);
+        return 1;
+    }
     return 0;
 }
 
 int yyerror(char *message) {
-    error (message, E_LEX);
-    return 0;
+    fprintf(stderr, "Error: %s\n", message);
+    exit(1);
 }
