@@ -1,6 +1,6 @@
 #!/bin/sh
 
-testdir="samples"
+testdir="tests"
 binary="./uc"
 exitcode=0
 
