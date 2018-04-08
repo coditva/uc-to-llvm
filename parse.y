@@ -75,7 +75,6 @@ statements      : statements statement
                 ;
 
 statement       : ';'
-                    { printf("success");}
                 | expression ';'
                 | IF '(' expression ')' statement ELSE statement
                 | IF '(' expression ')' statement
@@ -88,7 +87,6 @@ statement       : ';'
                 ;
 
 expression      : ID '=' expression
-                    { printf("that:"); }
                 | ID PA  expression
                 | ID NA  expression
                 | ID TA  expression
@@ -128,7 +126,6 @@ expression      : ID '=' expression
                 | ID PP
                 | ID NN
                 | ID
-                    { printf("yes");}
                 | INT8
                 | INT16
                 | INT32

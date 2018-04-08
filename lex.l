@@ -9,6 +9,7 @@ extern int yyerror(char *);
 %}
 
 %option noyywrap
+%option yylineno
 
 digit           [0-9]
 alpha           [a-zA-Z_]
@@ -20,8 +21,8 @@ token           [!$%&()*+,\-./:;<=>?\[\]^{|}~]
 
 [ \t\v\n\f\r]   /* skip whitespace */
 
-{id}    		{ install_id(); }
-{int}   		{ install_int(); }
+{id}    		{ return install_id(); }
+{int}   		{ return install_int(); }
 
     /* TODO: add hex, oct, chr */
 
@@ -46,7 +47,7 @@ token           [!$%&()*+,\-./:;<=>?\[\]^{|}~]
 "++"  			{ return PP; }
 "--"  			{ return NN; }
 
-{token}         { printf("this: %c\n", yytext[0]); return yytext[0]; }
+{token}         { return yytext[0]; }
 .               { yyerror("Unknown character found"); }
 
 %%
