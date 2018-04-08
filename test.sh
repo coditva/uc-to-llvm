@@ -4,16 +4,23 @@ testdir="samples"
 binary="./uc"
 exitcode=0
 
-for testfile in $(ls $testdir) ; do
-
-    $binary < $testdir/$testfile 1>/dev/null 2>&1
-
+function run_test() {
+    $binary < $testdir/$1 1>/dev/null 2>&1
     if [ $? -eq 0 ]; then
-        echo "[PASS] $testfile"
+        echo "[PASS] $1"
     else
-        echo "[FAIL] $testfile"
+        echo "[FAIL] $1"
         exitcode=1
     fi
+}
+
+if [[ $TEST != "" ]]; then
+    run_test $TEST
+    exit $exitcode
+fi
+
+for testfile in $(ls $testdir) ; do
+    run_test $testfile
 done
 
 exit $exitcode
