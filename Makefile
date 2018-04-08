@@ -29,7 +29,7 @@ ${PROGRAM}:		${OBJS}
 				${CC} ${C_FLAGS} -I${INCLUDE_DIR} -o $@ ${OBJS}
 
 test: 			all
-				./${PROGRAM} < testcase.txt
+				./test.sh
 
 clean:
 				rm -f ${OBJS} *.o ${PROGRAM} y.* lex.yy.*
