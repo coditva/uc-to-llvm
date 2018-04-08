@@ -1,4 +1,5 @@
 %{
+#include <stdio.h>
 #include "util.h"
 
 extern int yylex();
@@ -6,13 +7,9 @@ extern int yyerror(char *);
 %}
 
 %union {
-    int             ival;
-    struct Symbol   *symval;
+    int             num;
+    struct Symbol   *sym;
 }
-
-%token          SEMICOLON
-                CURLY_BRACE_OPEN
-                CURLY_BRACE_CLOSE
 
 %token  <sym>   BREAK
                 DO
@@ -22,26 +19,43 @@ extern int yyerror(char *);
                 RETURN
                 WHILE
 
-%token          PA  /* += */
-	        	NA  /* -= */
-	        	TA  /* *= */
-	        	DA  /* /= */
-	        	MA  /* %= */
-	        	AA  /* &= */
-	        	XA  /* ^= */
-	        	OA  /* |= */
-	        	LA  /* <<= */
-	        	RA  /* >>= */
-	        	OR  /* || */
-	        	AN  /* && */
-	        	EQ  /* == */
-	        	NE  /* != */
-	        	LE  /* <= */
-	        	GE  /* >= */
-	        	LS  /* << */
-	        	RS  /* >> */
-	        	PP  /* ++ */
-	        	NN  /* -- */
+%right          '='
+                '<'
+                '>'
+                '!'
+                '$'
+                '~'
+
+%left           '+'
+                '-'
+                '/'
+                '*'
+                '%'
+                '&'
+                '|'
+                '^'
+
+%right          PA  /* += */
+                NA  /* -= */
+                TA  /* *= */
+                DA  /* /= */
+                MA  /* %= */
+                AA  /* &= */
+                XA  /* ^= */
+                OA  /* |= */
+                LA  /* <<= */
+                RA  /* >>= */
+
+%left           OR  /* || */
+                AN  /* && */
+                EQ  /* == */
+                NE  /* != */
+                LE  /* <= */
+                GE  /* >= */
+                LS  /* << */
+                RS  /* >> */
+                PP  /* ++ */
+                NN  /* -- */
 
 %token  <sym>   ID
 
@@ -60,60 +74,67 @@ statements      : statements statement
                 | /* empty */
                 ;
 
-statement       : SEMICOLON
-                | expression SEMICOLON
-                    {
-                    }
-                | IF '(' expression ')' statement
+statement       : ';'
+                    { printf("success");}
+                | expression ';'
                 | IF '(' expression ')' statement ELSE statement
+                | IF '(' expression ')' statement
+                | WHILE '(' expression ')' statement
+                | DO statement WHILE '(' expression ')' ';'
+                | FOR '(' expression ';' expression ';' expression ')' statement
+                | RETURN expression ';'
+                | BREAK ';'
+                | '{' statements '}'
                 ;
 
 expression      : ID '=' expression
+                    { printf("that:"); }
                 | ID PA  expression
                 | ID NA  expression
                 | ID TA  expression
                 | ID DA  expression
-       	        | ID MA  expression
-       	        | ID AA  expression
-       	        | ID XA  expression
-       	        | ID OA  expression
-       	        | ID LA  expression
-       	        | ID RA  expression
-       	        | expression OR  expression
-       	        | expression AN  expression
-       	        | expression '|' expression
-       	        | expression '^' expression
-       	        | expression '&' expression
-       	        | expression EQ  expression
-       	        | expression NE  expression
-       	        | expression '<' expression
-       	        | expression '>' expression
-       	        | expression LE  expression
-       	        | expression GE  expression
-       	        | expression LS  expression
-       	        | expression RS  expression
-       	        | expression '+' expression
-       	        | expression '-' expression
-       	        | expression '*' expression
-       	        | expression '/' expression
-       	        | expression '%' expression
-       	        | '!' expression
-       	        | '~' expression
-       	        | '+' expression %prec '!' /* '+' at same precedence level as '!' */
-       	        | '-' expression %prec '!' /* '-' at same precedence level as '!' */
-       	        | '(' expression ')'
-                   /*| '$' INT8 */
-       	        | PP ID
-       	        | NN ID
-       	        | ID PP
-       	        | ID NN
-       	        | ID
-       	        | INT8
-       	        | INT16
-       	        | INT32
-       	        | FLT
-       	        | STR
-       	        ;
+                | ID MA  expression
+                | ID AA  expression
+                | ID XA  expression
+                | ID OA  expression
+                | ID LA  expression
+                | ID RA  expression
+                | expression OR  expression
+                | expression AN  expression
+                | expression '|' expression
+                | expression '^' expression
+                | expression '&' expression
+                | expression EQ  expression
+                | expression NE  expression
+                | expression '<' expression
+                | expression '>' expression
+                | expression LE  expression
+                | expression GE  expression
+                | expression LS  expression
+                | expression RS  expression
+                | expression '+' expression
+                | expression '-' expression
+                | expression '*' expression
+                | expression '/' expression
+                | expression '%' expression
+                | '!' expression
+                | '~' expression
+                | '+' expression %prec '!' /* '+' at same precedence level as '!' */
+                | '-' expression %prec '!' /* '-' at same precedence level as '!' */
+                | '(' expression ')'
+                | '$' INT8
+                | PP ID
+                | NN ID
+                | ID PP
+                | ID NN
+                | ID
+                    { printf("yes");}
+                | INT8
+                | INT16
+                | INT32
+                | FLT
+                | STR
+                ;
 
 %%
 

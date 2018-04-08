@@ -1,6 +1,11 @@
 %{
-#include "y.tab.h"
 #include "datatypes.h"
+#include "y.tab.h"
+#include "util.h"
+
+static int install_id();
+static int install_int();
+extern int yyerror(char *);
 %}
 
 %option noyywrap
@@ -9,15 +14,16 @@ digit           [0-9]
 alpha           [a-zA-Z_]
 id              {alpha}({alpha}|{digit})*
 int             {digit}+
+token           [!$%&()*+,\-./:;<=>?\[\]^{|}~]
 
 %%
 
 [ \t\v\n\f\r]   /* skip whitespace */
 
-";"     		{ return SEMICOLON; }
+{id}    		{ install_id(); }
+{int}   		{ install_int(); }
 
-{id}    		{ return ID; }
-{int}   		{ return INT8; }
+    /* TODO: add hex, oct, chr */
 
 "+="  			{ return PA; }
 "-="  			{ return NA; }
@@ -40,4 +46,17 @@ int             {digit}+
 "++"  			{ return PP; }
 "--"  			{ return NN; }
 
+{token}         { printf("this: %c\n", yytext[0]); return yytext[0]; }
+.               { yyerror("Unknown character found"); }
+
 %%
+
+static int install_id()
+{
+    return ID;
+}
+
+static int install_int()
+{
+    return ID;
+}
