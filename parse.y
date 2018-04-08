@@ -1,6 +1,7 @@
 %{
 #include <stdio.h>
 #include "util.h"
+#include "symbol.h"
 
 extern int yylex();
 extern int yyerror(char *);
@@ -137,7 +138,9 @@ expression      : ID '=' expression
 
 int main(int argc, char *argv[])
 {
+    symbol_init();
     yyparse();
+    symbol_destroy();
     return 0;
 }
 

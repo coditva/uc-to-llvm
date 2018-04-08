@@ -7,7 +7,7 @@
  */
 struct Symbol
 {
-    char *lexptr;
+    char *identifier;
 	int  token;
 	int  localvar;
 };

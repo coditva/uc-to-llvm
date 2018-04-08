@@ -2,10 +2,13 @@
 #include "datatypes.h"
 #include "y.tab.h"
 #include "util.h"
+#include "symbol.h"
 
 static int install_id();
 static int install_int();
 extern int yyerror(char *);
+
+static int localvar = 3;
 %}
 
 %option noyywrap
@@ -54,10 +57,17 @@ token           [!$%&()*+,\-./:;<=>?\[\]^{|}~]
 
 static int install_id()
 {
-    return ID;
+    yylval.sym = symbol_lookup(yytext);
+
+    if (!yylval.sym) {
+        yylval.sym = symbol_insert(yytext, ID);
+        yylval.sym -> localvar = localvar++;
+    }
+
+    return yylval.sym -> token;
 }
 
 static int install_int()
 {
-    return ID;
+    return INT8;
 }

@@ -7,8 +7,8 @@ CC_LEX			= lex
 CC_YACC 		= yacc
 YFLAGS 			= -d
 
-SRCS 			= y.tab.c lex.yy.c util.c
-OBJS 			= y.tab.o lex.yy.o util.o
+SRCS 			= y.tab.c lex.yy.c util.c symbol.c
+OBJS 			= y.tab.o lex.yy.o util.o symbol.o
 INCLUDE_DIR		= .
 
 .PHONY: 		all test
