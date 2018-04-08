@@ -1,3 +1,4 @@
+#include <llvm-c/Core.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -34,7 +35,16 @@ struct Symbol * symbol_insert(const char *identifier, int token)
         malloc(sizeof(struct SymbolTableNode));
     new -> data = (struct Symbol *) malloc(sizeof(struct Symbol));
     new -> data -> identifier = strdup(identifier);
+    new -> data -> token = token;
     new -> next = NULL;
+
+    if (symbols_list.start == NULL) {
+        symbols_list.start = new;
+        symbols_list.end = new;
+    } else {
+        symbols_list.end -> next = new;
+        symbols_list.end = new;
+    }
     return new -> data;
 }
 
@@ -44,17 +54,18 @@ void symbol_init()
     symbols_list.end = NULL;
 
     struct Symbol keywords[] = {
-        { "while",  WHILE },
-        { "break",  BREAK },
-        { "do",     DO },
-        { "if",     IF },
-        { "else",   ELSE },
-        { "for",    FOR },
-        { "return", RETURN },
+        { "while",  WHILE,  0 },
+        { "break",  BREAK,  0 },
+        { "do",     DO,     0 },
+        { "if",     IF,     0 },
+        { "else",   ELSE,   0 },
+        { "for",    FOR,    0 },
+        { "return", RETURN, 0 },
         { NULL },
-    }, *keyword;
-    for (keyword = keywords; keyword; ++keyword) {
-        symbol_insert(keyword -> identifier, keyword -> token);
+    };
+    int size = sizeof(keywords)/sizeof(struct Symbol);
+    for (int i = 0; i < size - 1; i++) {
+        symbol_insert(keywords[i].identifier, keywords[i].token);
     }
 }
 

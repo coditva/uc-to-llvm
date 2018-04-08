@@ -1,8 +1,8 @@
 PROGRAM 		= uc
 
 CC 				= gcc
-CC_FLAGS 		= -Wall -Wno-unused-function -Wno-format-overflow -Wpedantic -g
-CC_LFLAGS		= -lfl
+CC_FLAGS 		= -Wall -Wno-unused-function -Wno-format-overflow -Wpedantic -O -g
+CC_LFLAGS		= -lfl `llvm-config --ldflags --system-libs --libs core`
 CC_LEX			= lex
 CC_YACC 		= yacc
 YFLAGS 			= -d
@@ -17,7 +17,7 @@ INCLUDE_DIR		= .
 all: 			${PROGRAM}
 
 .c.o: 			${SRCS}
-				${CC} ${CC_FLAGS} -c $*.c -o $@ -O ${CC_LFLAGS}
+				${CC} ${CC_FLAGS} -c $*.c -o $@
 
 y.tab.c: 		parse.y
 				${CC_YACC} ${YFLAGS} $<
@@ -25,8 +25,8 @@ y.tab.c: 		parse.y
 lex.yy.c: 		lex.l
 				${CC_LEX} $<
 
-${PROGRAM}:		${OBJS}
-				${CC} ${C_FLAGS} -I${INCLUDE_DIR} -o $@ ${OBJS}
+${PROGRAM}:		${OBJS} Makefile
+				${CC} ${C_FLAGS} -I${INCLUDE_DIR} -o $@ ${OBJS} ${CC_LFLAGS}
 
 test: 			all
 				./test.sh

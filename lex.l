@@ -1,4 +1,5 @@
 %{
+#include <llvm-c/Core.h>
 #include "datatypes.h"
 #include "y.tab.h"
 #include "symbol.h"

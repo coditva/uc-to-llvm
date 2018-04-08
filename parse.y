@@ -1,4 +1,5 @@
 %{
+#include <llvm-c/Core.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "symbol.h"
@@ -6,14 +7,17 @@
 extern int yylex();
 extern int yyerror(char *);
 extern FILE *yyin;
+
+LLVMBuilderRef builder;
 %}
 
 %union {
     unsigned int    num;
     struct Symbol   *sym;
+    LLVMValueRef    val;
 }
 
-%token  <sym>   BREAK
+%token  <val>   BREAK
                 DO
                 ELSE
                 FOR
@@ -21,14 +25,16 @@ extern FILE *yyin;
                 RETURN
                 WHILE
 
-%right          '='
+%right  <val>   '='
                 '<'
                 '>'
                 '!'
                 '$'
                 '~'
+                '('
+                ')'
 
-%left           '+'
+%left   <val>   '+'
                 '-'
                 '/'
                 '*'
@@ -37,7 +43,7 @@ extern FILE *yyin;
                 '|'
                 '^'
 
-%right          PA  /* += */
+%right  <val>   PA  /* += */
                 NA  /* -= */
                 TA  /* *= */
                 DA  /* /= */
@@ -48,7 +54,7 @@ extern FILE *yyin;
                 LA  /* <<= */
                 RA  /* >>= */
 
-%left           OR  /* || */
+%left   <val>   OR  /* || */
                 AN  /* && */
                 EQ  /* == */
                 NE  /* != */
@@ -59,15 +65,17 @@ extern FILE *yyin;
                 PP  /* ++ */
                 NN  /* -- */
 
-%token  <sym>   ID
+%token  <val>   ID
 
-%token  <num>   INT8
+%token  <val>   INT8
                 INT16
                 INT32
 
-%token  <flt>   FLT
+%token  <val>   FLT
 
-%token  <str>   STR
+%token  <val>   STR
+
+%type   <val>   expression
 
 
 %%
@@ -84,6 +92,7 @@ statement       : ';'
                 | DO statement WHILE '(' expression ')' ';'
                 | FOR '(' expression ';' expression ';' expression ')' statement
                 | RETURN expression ';'
+                    { LLVMBuildRet(builder, $2); }
                 | BREAK ';'
                 | '{' statements '}'
                 ;
@@ -113,6 +122,7 @@ expression      : ID '=' expression
                 | expression LS  expression
                 | expression RS  expression
                 | expression '+' expression
+                    { $$ = LLVMBuildAdd(builder, $1, $3, "add"); }
                 | expression '-' expression
                 | expression '*' expression
                 | expression '/' expression
@@ -123,6 +133,7 @@ expression      : ID '=' expression
                 | '-' expression %prec '!' /* '-' at same precedence level as '!' */
                 | '(' expression ')'
                 | '$' INT8
+                    { $$ = LLVMBuildAlloca(builder, LLVMInt32Type(), "var"); }
                 | PP ID
                 | NN ID
                 | ID PP
@@ -144,8 +155,33 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Error: %s\n", "Cannot open file");
             return 1;
         }
+
+        /* initialize symbol table */
         symbol_init();
+
+        /* create top level module */
+        LLVMModuleRef module = LLVMModuleCreateWithName("top");
+
+        /* add a main function */
+        // TODO: add a argv type
+        LLVMTypeRef params_type[] = {LLVMInt32Type()};
+        LLVMTypeRef ret_type = LLVMFunctionType(LLVMInt32Type(), params_type, 1, 0);
+        LLVMValueRef main_func = LLVMAddFunction(module, "main", ret_type);
+
+        /* add entry */
+        LLVMBasicBlockRef basic_block = LLVMAppendBasicBlock(main_func, "entry");
+
+        /* add builder */
+        builder = LLVMCreateBuilder();
+        LLVMPositionBuilderAtEnd(builder, basic_block);
+
+        /* add instructions */
+        /* begin parsing */
         yyparse();
+
+        LLVMDumpModule(module);
+
+        /* destroy the symbol table */
         symbol_destroy();
     } else {
         fprintf(stderr, "Usage: %s FILENAME\n", argv[0]);
