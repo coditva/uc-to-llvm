@@ -23,7 +23,7 @@ token           [!$%&()*+,\-./:;<=>?\[\]^{|}~]
 
 [ \t\v\n\f\r]   /* skip whitespace */
 
-    /*"//".*[\n]      [> skip comments <]*/
+"//".*[\n]      /* skip comments */
 
 {id}    		{ return install_id(); }
 {int}   		{ return install_int(); }
