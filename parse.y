@@ -404,6 +404,7 @@ forinc          : /* empty */
 
 int main(int argc, char *argv[])
 {
+    char filename[] = "a.ll";
     if (argc > 1) {
         if (!(yyin = fopen(argv[1], "r"))) {
             fprintf(stderr, "Error: %s\n", "Cannot open file");
@@ -432,7 +433,8 @@ int main(int argc, char *argv[])
         /* begin parsing */
         yyparse();
 
-        LLVMDumpModule(module);
+        /* print to file */
+        LLVMPrintModuleToFile(module, filename, NULL);
 
         /* cleanup llvm */
         LLVMDisposeBuilder(builder);

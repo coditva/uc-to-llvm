@@ -5,3 +5,5 @@
 *.tab.h
 uc
 temp/
+*.bc
+*.ll

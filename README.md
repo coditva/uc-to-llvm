@@ -10,6 +10,7 @@ make test   # run tests
 make clean  # cleanup
 TEST=test0.uc make test  # run tests on test0.uc only
 ```
+The IR generated can be found in `a.ll` and the byte-code is in `a.bc`.
 
 ### Author
 Utkarsh Maheshwari
