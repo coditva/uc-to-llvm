@@ -106,8 +106,8 @@ statement       : ';'
 expression      : ID '=' expression
                     { struct Symbol *sym = symbol_lookup($1 -> identifier);
                       if (!sym) { sym = symbol_insert($1 -> identifier, ID); }
-                      sym -> value = $3;
                       $$ = LLVMBuildLoad(builder, $3, "assn");
+                      sym -> value = $$;
                     }
                 | ID PA  expression
                     { struct Symbol *sym = symbol_lookup($1 -> identifier);
@@ -228,9 +228,45 @@ expression      : ID '=' expression
                 | '$' INT8
                     { $$ = LLVMBuildAlloca(builder, LLVMInt32Type(), "var"); }
                 | PP ID
+                    { struct Symbol *sym = symbol_lookup($2 -> identifier);
+                      if (sym) {
+                        LLVMValueRef val = LLVMConstInt(LLVMInt8Type(), 1, 0);
+                        sym -> value = LLVMBuildAdd(builder, sym -> value, val, "preinc");
+                        $$ = sym -> value;
+                      } else {
+                        yyerror("Symbol not defined");
+                      }
+                    }
                 | NN ID
+                    { struct Symbol *sym = symbol_lookup($2 -> identifier);
+                      if (sym) {
+                        LLVMValueRef val = LLVMConstInt(LLVMInt8Type(), 1, 0);
+                        sym -> value = LLVMBuildSub(builder, sym -> value, val, "predec");
+                        $$ = sym -> value;
+                      } else {
+                        yyerror("Symbol not defined");
+                      }
+                    }
                 | ID PP
+                    { struct Symbol *sym = symbol_lookup($1 -> identifier);
+                      if (sym) {
+                        LLVMValueRef val = LLVMConstInt(LLVMInt8Type(), 1, 0);
+                        sym -> value = LLVMBuildAdd(builder, sym -> value, val, "postinc");
+                        $$ = sym -> value;
+                      } else {
+                        yyerror("Symbol not defined");
+                      }
+                    }
                 | ID NN
+                    { struct Symbol *sym = symbol_lookup($1 -> identifier);
+                      if (sym) {
+                        LLVMValueRef val = LLVMConstInt(LLVMInt8Type(), 1, 0);
+                        sym -> value = LLVMBuildSub(builder, sym -> value, val, "postdec");
+                        $$ = sym -> value;
+                      } else {
+                        yyerror("Symbol not defined");
+                      }
+                    }
                 | ID
                     { struct Symbol *sym = symbol_lookup($1 -> identifier);
                       if (sym) {
