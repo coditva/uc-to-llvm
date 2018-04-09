@@ -9,7 +9,6 @@ struct Symbol
 {
     char *identifier;
 	int  token;
-	int  localvar;
 	LLVMValueRef value;
 };
 

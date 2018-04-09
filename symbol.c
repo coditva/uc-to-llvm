@@ -74,9 +74,9 @@ void symbol_destroy()
     struct SymbolTableNode *node = symbols_list.start, *temp;
     while (node != NULL) {
         temp = node;
-        /*free(temp -> data -> identifier);*/
-        /*free(temp -> data);*/
-        /*free(temp);*/
         node = node -> next;
+        free(temp -> data -> identifier);
+        free(temp -> data);
+        free(temp);
     }
 }

@@ -7,8 +7,6 @@
 static int install_id();
 static int install_int();
 extern int yyerror(char *);
-
-static int localvar = 3;
 %}
 
 %option noyywrap
@@ -63,7 +61,6 @@ static int install_id()
 
     if (!yylval.sym) {
         yylval.sym = symbol_insert(yytext, ID);
-        yylval.sym -> localvar = localvar++;
     }
 
     return yylval.sym -> token;
