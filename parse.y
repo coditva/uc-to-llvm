@@ -340,40 +340,27 @@ expression      : ID '=' expression
 
 startthen       : /* empty */
                     {
-                      LLVMBasicBlockRef thenblk = LLVMAppendBasicBlock(main_func, "then");
-                      LLVMPositionBuilderAtEnd(builder, thenblk);
-                      $$ = thenblk;
+                      $$ = LLVMAppendBasicBlock(main_func, "then");
+                      LLVMPositionBuilderAtEnd(builder, $$);
                     }
                 ;
-
 startelse       : /* empty */
                     {
-                      LLVMBasicBlockRef elseblk = LLVMAppendBasicBlock(main_func, "else");
-                      LLVMPositionBuilderAtEnd(builder, elseblk);
-                      $$ = elseblk;
+                      $$ = LLVMAppendBasicBlock(main_func, "else");
+                      LLVMPositionBuilderAtEnd(builder, $$);
                     }
                 ;
-
 endif           : /* empty */
-                    {
-                      LLVMBasicBlockRef blk = LLVMAppendBasicBlock(main_func, "endif");
-                      $$ = blk;
-                    }
+                    { $$ = LLVMAppendBasicBlock(main_func, "endif"); }
                 ;
-
 startwhile      : /* empty */
                     {
-                      LLVMBasicBlockRef blk = LLVMAppendBasicBlock(main_func, "while");
-                      LLVMPositionBuilderAtEnd(builder, blk);
-                      $$ = blk;
+                      $$ = LLVMAppendBasicBlock(main_func, "while");
+                      LLVMPositionBuilderAtEnd(builder, $$);
                     }
                 ;
-
 endwhile        : /* empty */
-                    {
-                      LLVMBasicBlockRef blk = LLVMAppendBasicBlock(main_func, "endwhile");
-                      $$ = blk;
-                    }
+                    { $$ = LLVMAppendBasicBlock(main_func, "endwhile"); }
                 ;
 
 %%
