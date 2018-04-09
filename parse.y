@@ -83,6 +83,7 @@ LLVMBasicBlockRef  entry;
 %type   <val>   expression
 %type   <blk>   statement statements
 %type   <blk>   startthen startelse endif
+%type   <blk>   startwhile endwhile
 
 
 %%
@@ -121,8 +122,17 @@ statement       : ';'
 
                       $$ = $7;
                     }
-                | WHILE '(' expression ')' statement
-                    { $$ = LLVMValueAsBasicBlock(NULL); }
+                | WHILE '(' expression ')' startwhile statement endwhile
+                    {
+                      LLVMPositionBuilderAtEnd(builder, entry);
+                      LLVMBuildCondBr(builder, $3, $5, $7);
+
+                      /* check condition for while */
+                      LLVMPositionBuilderAtEnd(builder, $5);
+                      LLVMBuildCondBr(builder, $3, $5, $7);
+
+                      $$ = $7;
+                    }
                 | DO statement WHILE '(' expression ')' ';'
                     { $$ = LLVMValueAsBasicBlock(NULL); }
                 | FOR '(' expression ';' expression ';' expression ')' statement
@@ -347,6 +357,21 @@ startelse       : /* empty */
 endif           : /* empty */
                     {
                       LLVMBasicBlockRef blk = LLVMAppendBasicBlock(main_func, "endif");
+                      $$ = blk;
+                    }
+                ;
+
+startwhile      : /* empty */
+                    {
+                      LLVMBasicBlockRef blk = LLVMAppendBasicBlock(main_func, "while");
+                      LLVMPositionBuilderAtEnd(builder, blk);
+                      $$ = blk;
+                    }
+                ;
+
+endwhile        : /* empty */
+                    {
+                      LLVMBasicBlockRef blk = LLVMAppendBasicBlock(main_func, "endwhile");
                       $$ = blk;
                     }
                 ;
