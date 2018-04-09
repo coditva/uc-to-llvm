@@ -136,8 +136,12 @@ statement       : ';'
                       LLVMPositionBuilderAtEnd(builder, $7);
                       $$ = $7;
                     }
-                | DO statement WHILE '(' expression ')' ';'
-                    { $$ = LLVMValueAsBasicBlock(NULL); }
+                | DO startwhile statement WHILE '(' expression ')' ';' endwhile
+                    {
+                      LLVMBuildCondBr(builder, $6, $2, $9);
+                      LLVMPositionBuilderAtEnd(builder, $9);
+                      $$ = $9;
+                    }
                 | FOR '(' expression ';' expression ';' expression ')' statement
                     { $$ = LLVMValueAsBasicBlock(NULL); }
                 | RETURN expression ';'
