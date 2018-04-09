@@ -9,6 +9,10 @@ extern int yyerror(char *);
 extern FILE *yyin;
 
 LLVMBuilderRef builder;
+LLVMModuleRef  module;
+LLVMValueRef   main_func;
+LLVMBasicBlockRef  curr;
+LLVMBasicBlockRef  entry;
 %}
 
 %union {
@@ -78,36 +82,67 @@ LLVMBuilderRef builder;
 
 %type   <val>   expression
 %type   <blk>   statement statements
+%type   <blk>   startthen startelse endif
 
 
 %%
 
 statements      : statements statement
+                    { $$ = $2; }
                 | /* empty */
+                    { $$ = LLVMValueAsBasicBlock(NULL); }
                 ;
 
 statement       : ';'
-                    { $$ = NULL; }
+                    { $$ = LLVMValueAsBasicBlock(NULL); }
                 | expression ';'
-                    { $$ = $1; }
-                | IF '(' expression ')' statement ELSE statement
-                    { $$ = LLVMBuildCondBr(builder, $3, $5, $7); }
-                | IF '(' expression ')' statement
-                    { $$ = LLVMBuildCondBr(builder, $3, $5, NULL); }
+                    { $$ = LLVMValueAsBasicBlock(NULL); }
+                | IF '(' expression ')' startthen statement ELSE startelse statement endif
+                    {
+                      LLVMPositionBuilderAtEnd(builder, entry);
+                      LLVMBuildCondBr(builder, $3, $5, $8);
+
+                      /* put branch instruction after completion of then, else blocks */
+                      LLVMPositionBuilderAtEnd(builder, $5);
+                      LLVMBuildBr(builder, $10);
+                      LLVMPositionBuilderAtEnd(builder, $8);
+                      LLVMBuildBr(builder, $10);
+
+                      $$ = $10;
+                    }
+                | IF '(' expression ')' startthen statement endif
+                    {
+                      LLVMPositionBuilderAtEnd(builder, entry);
+                      LLVMBuildCondBr(builder, $3, $5, $7);
+
+                      /* put branch intruction after completion of then block */
+                      LLVMPositionBuilderAtEnd(builder, $5);
+                      LLVMBuildBr(builder, $7);
+
+                      $$ = $7;
+                    }
                 | WHILE '(' expression ')' statement
+                    { $$ = LLVMValueAsBasicBlock(NULL); }
                 | DO statement WHILE '(' expression ')' ';'
+                    { $$ = LLVMValueAsBasicBlock(NULL); }
                 | FOR '(' expression ';' expression ';' expression ')' statement
+                    { $$ = LLVMValueAsBasicBlock(NULL); }
                 | RETURN expression ';'
-                    { $$ = LLVMBuildRet(builder, $2); }
+                    { LLVMValueRef ret = LLVMBuildRet(builder, $2);
+                      $$ = LLVMValueAsBasicBlock(ret);
+                    }
                 | BREAK ';'
+                    { $$ = LLVMValueAsBasicBlock(NULL); }
                 | '{' statements '}'
+                    { $$ = $2; }
                 ;
 
 expression      : ID '=' expression
                     { struct Symbol *sym = symbol_lookup($1 -> identifier);
                       if (!sym) { sym = symbol_insert($1 -> identifier, ID); }
-                      $$ = LLVMBuildLoad(builder, $3, "assn");
-                      sym -> value = $$;
+                      LLVMValueRef val = LLVMBuildLoad(builder, $3, "assn");
+                      sym -> value = val;
+                      $$ = val;
                     }
                 | ID PA  expression
                     { struct Symbol *sym = symbol_lookup($1 -> identifier);
@@ -198,13 +233,21 @@ expression      : ID '=' expression
                 | expression '&' expression
                     { $$ = LLVMBuildAnd(builder, $1, $3, "and"); }
                 | expression EQ  expression
+                    { $$ = LLVMBuildICmp(builder, LLVMIntEQ, LLVMConstInt(LLVMInt32Type(), 0, 0), LLVMConstInt(LLVMInt32Type(), 0, 0), "compeq"); }
                 | expression NE  expression
+                    { $$ = LLVMBuildICmp(builder, LLVMIntNE, $1, $3, "compne"); }
                 | expression '<' expression
+                    { $$ = LLVMBuildICmp(builder, LLVMIntSGT, $1, $3, "compgt"); }
                 | expression '>' expression
+                    { $$ = LLVMBuildICmp(builder, LLVMIntSLT, $1, $3, "complt"); }
                 | expression LE  expression
+                    { $$ = LLVMBuildICmp(builder, LLVMIntSLE, $1, $3, "comple"); }
                 | expression GE  expression
+                    { $$ = LLVMBuildICmp(builder, LLVMIntSGE, $1, $3, "compge"); }
                 | expression LS  expression
+                    { $$ = LLVMBuildShl(builder, $1, $3, "shl"); }
                 | expression RS  expression
+                    { $$ = LLVMBuildLShr(builder, $1, $3, "shr"); }
                 | expression '+' expression
                     { $$ = LLVMBuildAdd(builder, $1, $3, "add"); }
                 | expression '-' expression
@@ -285,6 +328,29 @@ expression      : ID '=' expression
                 | STR
                 ;
 
+startthen       : /* empty */
+                    {
+                      LLVMBasicBlockRef thenblk = LLVMAppendBasicBlock(main_func, "then");
+                      LLVMPositionBuilderAtEnd(builder, thenblk);
+                      $$ = thenblk;
+                    }
+                ;
+
+startelse       : /* empty */
+                    {
+                      LLVMBasicBlockRef elseblk = LLVMAppendBasicBlock(main_func, "else");
+                      LLVMPositionBuilderAtEnd(builder, elseblk);
+                      $$ = elseblk;
+                    }
+                ;
+
+endif           : /* empty */
+                    {
+                      LLVMBasicBlockRef blk = LLVMAppendBasicBlock(main_func, "endif");
+                      $$ = blk;
+                    }
+                ;
+
 %%
 
 int main(int argc, char *argv[])
@@ -299,20 +365,20 @@ int main(int argc, char *argv[])
         symbol_init();
 
         /* create top level module */
-        LLVMModuleRef module = LLVMModuleCreateWithName("top");
+        module = LLVMModuleCreateWithName("top");
 
         /* add a main function */
         // TODO: add a argv type
         LLVMTypeRef params_type[] = {LLVMInt32Type()};
         LLVMTypeRef ret_type = LLVMFunctionType(LLVMInt32Type(), params_type, 1, 0);
-        LLVMValueRef main_func = LLVMAddFunction(module, "main", ret_type);
+        main_func = LLVMAddFunction(module, "main", ret_type);
 
         /* add entry */
-        LLVMBasicBlockRef basic_block = LLVMAppendBasicBlock(main_func, "entry");
+        entry = LLVMAppendBasicBlock(main_func, "entry");
 
         /* add builder */
         builder = LLVMCreateBuilder();
-        LLVMPositionBuilderAtEnd(builder, basic_block);
+        LLVMPositionBuilderAtEnd(builder, entry);
 
         /* begin parsing */
         yyparse();
