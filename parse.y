@@ -15,6 +15,7 @@ LLVMBuilderRef builder;
     unsigned int    num;
     struct Symbol   *sym;
     LLVMValueRef    val;
+    LLVMBasicBlockRef    blk;
 }
 
 %token  <val>   BREAK
@@ -65,9 +66,9 @@ LLVMBuilderRef builder;
                 PP  /* ++ */
                 NN  /* -- */
 
-%token  <val>   ID
+%token  <sym>   ID
 
-%token  <val>   INT8
+%token  <num>   INT8
                 INT16
                 INT32
 
@@ -76,6 +77,7 @@ LLVMBuilderRef builder;
 %token  <val>   STR
 
 %type   <val>   expression
+%type   <blk>   statement statements
 
 
 %%
@@ -85,29 +87,108 @@ statements      : statements statement
                 ;
 
 statement       : ';'
+                    { $$ = NULL; }
                 | expression ';'
+                    { $$ = $1; }
                 | IF '(' expression ')' statement ELSE statement
+                    { $$ = LLVMBuildCondBr(builder, $3, $5, $7); }
                 | IF '(' expression ')' statement
+                    { $$ = LLVMBuildCondBr(builder, $3, $5, NULL); }
                 | WHILE '(' expression ')' statement
                 | DO statement WHILE '(' expression ')' ';'
                 | FOR '(' expression ';' expression ';' expression ')' statement
                 | RETURN expression ';'
-                    { LLVMBuildRet(builder, $2); }
+                    { $$ = LLVMBuildRet(builder, $2); }
                 | BREAK ';'
                 | '{' statements '}'
                 ;
 
 expression      : ID '=' expression
+                    { struct Symbol *sym = symbol_lookup($1 -> identifier);
+                      if (!sym) { sym = symbol_insert($1 -> identifier, ID); }
+                      sym -> value = $3;
+                      $$ = LLVMBuildLoad(builder, $3, "assn");
+                    }
                 | ID PA  expression
+                    { struct Symbol *sym = symbol_lookup($1 -> identifier);
+                      if (sym) {
+                        sym -> value = LLVMBuildAdd(builder, sym -> value, $3, "addinc");
+                      } else {
+                        yyerror("Symbol not defined");
+                      }
+                    }
                 | ID NA  expression
+                    { struct Symbol *sym = symbol_lookup($1 -> identifier);
+                      if (sym) {
+                        sym -> value = LLVMBuildSub(builder, sym -> value, $3, "subinc");
+                      } else {
+                        yyerror("Symbol not defined");
+                      }
+                    }
                 | ID TA  expression
+                    { struct Symbol *sym = symbol_lookup($1 -> identifier);
+                      if (sym) {
+                        sym -> value = LLVMBuildMul(builder, sym -> value, $3, "mulinc");
+                      } else {
+                        yyerror("Symbol not defined");
+                      }
+                    }
                 | ID DA  expression
+                    { struct Symbol *sym = symbol_lookup($1 -> identifier);
+                      if (sym) {
+                        sym -> value = LLVMBuildUDiv(builder, sym -> value, $3, "divinc");
+                      } else {
+                        yyerror("Symbol not defined");
+                      }
+                    }
                 | ID MA  expression
+                    { struct Symbol *sym = symbol_lookup($1 -> identifier);
+                      if (sym) {
+                        sym -> value = LLVMBuildURem(builder, sym -> value, $3, "modinc");
+                      } else {
+                        yyerror("Symbol not defined");
+                      }
+                    }
                 | ID AA  expression
+                    { struct Symbol *sym = symbol_lookup($1 -> identifier);
+                      if (sym) {
+                        sym -> value = LLVMBuildAnd(builder, sym -> value, $3, "andinc");
+                      } else {
+                        yyerror("Symbol not defined");
+                      }
+                    }
                 | ID XA  expression
+                    { struct Symbol *sym = symbol_lookup($1 -> identifier);
+                      if (sym) {
+                        sym -> value = LLVMBuildXor(builder, sym -> value, $3, "xorinc");
+                      } else {
+                        yyerror("Symbol not defined");
+                      }
+                    }
                 | ID OA  expression
+                    { struct Symbol *sym = symbol_lookup($1 -> identifier);
+                      if (sym) {
+                        sym -> value = LLVMBuildOr(builder, sym -> value, $3, "orinc");
+                      } else {
+                        yyerror("Symbol not defined");
+                      }
+                    }
                 | ID LA  expression
+                    { struct Symbol *sym = symbol_lookup($1 -> identifier);
+                      if (sym) {
+                        sym -> value = LLVMBuildShl(builder, sym -> value, $3, "lshinc");
+                      } else {
+                        yyerror("Symbol not defined");
+                      }
+                    }
                 | ID RA  expression
+                    { struct Symbol *sym = symbol_lookup($1 -> identifier);
+                      if (sym) {
+                        sym -> value = LLVMBuildLShr(builder, sym -> value, $3, "rshinc");
+                      } else {
+                        yyerror("Symbol not defined");
+                      }
+                    }
                 | expression OR  expression
                 | expression AN  expression
                 | expression '|' expression
@@ -151,9 +232,19 @@ expression      : ID '=' expression
                 | ID PP
                 | ID NN
                 | ID
+                    { struct Symbol *sym = symbol_lookup($1 -> identifier);
+                      if (sym) {
+                        $$ = sym -> value;
+                      } else {
+                        yyerror("Not defined");
+                      }
+                    }
                 | INT8
+                    { $$ = LLVMConstInt(LLVMInt8Type(), $1, 0); }
                 | INT16
+                    { $$ = LLVMConstInt(LLVMInt16Type(), $1, 0); }
                 | INT32
+                    { $$ = LLVMConstInt(LLVMInt32Type(), $1, 0); }
                 | FLT
                 | STR
                 ;
