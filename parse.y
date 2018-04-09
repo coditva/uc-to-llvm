@@ -97,7 +97,7 @@ statements      : statements statement
 statement       : ';'
                     { $$ = LLVMValueAsBasicBlock(NULL); }
                 | expression ';'
-                    { $$ = LLVMValueAsBasicBlock(NULL); }
+                    { $$ = LLVMValueAsBasicBlock($1); }
                 | IF '(' expression ')' startthen statement ELSE startelse statement endif
                     {
                       LLVMPositionBuilderAtEnd(builder, entry);
@@ -164,7 +164,12 @@ statement       : ';'
                       $$ = $12;
                     }
                 | RETURN expression ';'
-                    { LLVMValueRef ret = LLVMBuildRet(builder, $2);
+                    {
+                      /* cast retval to i32 */
+                      LLVMValueRef retval =
+                        LLVMBuildSExt(builder, $2, LLVMInt32Type(), "retcast");
+
+                      LLVMValueRef ret = LLVMBuildRet(builder, retval);
                       $$ = LLVMValueAsBasicBlock(ret);
                     }
                 | BREAK ';'
@@ -409,7 +414,7 @@ int main(int argc, char *argv[])
         symbol_init();
 
         /* create top level module */
-        module = LLVMModuleCreateWithName("top");
+        module = LLVMModuleCreateWithName("main");
 
         /* add a main function */
         // TODO: add a argv type
