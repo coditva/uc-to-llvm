@@ -83,7 +83,7 @@ LLVMBasicBlockRef  entry;
 %type   <val>   expression
 %type   <blk>   statement statements
 %type   <blk>   startthen startelse endif
-%type   <blk>   startwhile endwhile
+%type   <blk>   startwhile endwhile forinc
 
 
 %%
@@ -142,8 +142,27 @@ statement       : ';'
                       LLVMPositionBuilderAtEnd(builder, $9);
                       $$ = $9;
                     }
-                | FOR '(' expression ';' expression ';' expression ')' statement
-                    { $$ = LLVMValueAsBasicBlock(NULL); }
+                | FOR '(' expression ';' expression ';' forinc expression ')'
+                        startwhile statement endwhile
+                    {
+                      LLVMPositionBuilderAtEnd(builder, entry);
+                      LLVMBuildCondBr(builder, $5, $10, $12);
+
+                      /* put the increment at the end of while */
+                      LLVMPositionBuilderAtEnd(builder, $10);
+                      LLVMBuildBr(builder, $7);
+
+                      /* branch back to while from forinc */
+                      LLVMPositionBuilderAtEnd(builder, $7);
+                      LLVMBuildBr(builder, $10);
+
+                      /* check condition for loop */
+                      LLVMPositionBuilderAtEnd(builder, $10);
+                      LLVMBuildCondBr(builder, $5, $10, $12);
+
+                      LLVMPositionBuilderAtEnd(builder, $12);
+                      $$ = $12;
+                    }
                 | RETURN expression ';'
                     { LLVMValueRef ret = LLVMBuildRet(builder, $2);
                       $$ = LLVMValueAsBasicBlock(ret);
@@ -368,6 +387,12 @@ startwhile      : /* empty */
                 ;
 endwhile        : /* empty */
                     { $$ = LLVMAppendBasicBlock(main_func, "endwhile"); }
+                ;
+forinc          : /* empty */
+                    {
+                      $$ = LLVMAppendBasicBlock(main_func, "forinc");
+                      LLVMPositionBuilderAtEnd(builder, $$);
+                    }
                 ;
 
 %%
