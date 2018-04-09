@@ -109,6 +109,7 @@ statement       : ';'
                       LLVMPositionBuilderAtEnd(builder, $8);
                       LLVMBuildBr(builder, $10);
 
+                      LLVMPositionBuilderAtEnd(builder, $10);
                       $$ = $10;
                     }
                 | IF '(' expression ')' startthen statement endif
@@ -120,6 +121,7 @@ statement       : ';'
                       LLVMPositionBuilderAtEnd(builder, $5);
                       LLVMBuildBr(builder, $7);
 
+                      LLVMPositionBuilderAtEnd(builder, $7);
                       $$ = $7;
                     }
                 | WHILE '(' expression ')' startwhile statement endwhile
@@ -131,6 +133,7 @@ statement       : ';'
                       LLVMPositionBuilderAtEnd(builder, $5);
                       LLVMBuildCondBr(builder, $3, $5, $7);
 
+                      LLVMPositionBuilderAtEnd(builder, $7);
                       $$ = $7;
                     }
                 | DO statement WHILE '(' expression ')' ';'
