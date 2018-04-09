@@ -8,7 +8,7 @@ Make sure you have LLVM library installed before compiling
 make        # compile
 make test   # run tests
 make clean  # cleanup
-TEST=test0.uc  # run tests on test0.uc only
+TEST=test0.uc make test  # run tests on test0.uc only
 ```
 
 ### Author
