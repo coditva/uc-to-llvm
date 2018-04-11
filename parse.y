@@ -179,16 +179,18 @@ statement       : ';'
                 ;
 
 expression      : ID '=' expression
-                    { struct Symbol *sym = symbol_lookup($1 -> identifier);
-                      if (!sym) { sym = symbol_insert($1 -> identifier, ID); }
-                      LLVMValueRef val = LLVMBuildLoad(builder, $3, "assn");
-                      sym -> value = val;
-                      $$ = val;
+                    {
+                      struct Symbol *sym = symbol_lookup($1 -> identifier);
+                      if (!sym) { yyerror("Symbol not found"); }
+                      sym -> value = LLVMBuildAlloca(builder, LLVMTypeOf($3), $1 -> identifier);
+                      $$ = LLVMBuildStore(builder, $3, sym -> value);
                     }
                 | ID PA  expression
                     { struct Symbol *sym = symbol_lookup($1 -> identifier);
-                      if (sym) {
-                        sym -> value = LLVMBuildAdd(builder, sym -> value, $3, "addinc");
+                      if (sym && sym -> value) {
+                        LLVMValueRef tmp = LLVMBuildAdd(builder, sym -> value, $3, "addinc");
+                        sym -> value = LLVMBuildLoad(builder, tmp, "temp");
+                        $$ = $3;
                       } else {
                         yyerror("Symbol not defined");
                       }
@@ -197,6 +199,7 @@ expression      : ID '=' expression
                     { struct Symbol *sym = symbol_lookup($1 -> identifier);
                       if (sym) {
                         sym -> value = LLVMBuildSub(builder, sym -> value, $3, "subinc");
+                        $$ = $3;
                       } else {
                         yyerror("Symbol not defined");
                       }
@@ -204,7 +207,11 @@ expression      : ID '=' expression
                 | ID TA  expression
                     { struct Symbol *sym = symbol_lookup($1 -> identifier);
                       if (sym) {
-                        sym -> value = LLVMBuildMul(builder, sym -> value, $3, "mulinc");
+                        LLVMValueRef val = LLVMBuildLoad(builder, sym -> value, "load");
+                        LLVMBuildStore(builder,
+                            LLVMBuildMul(builder, val, $3, "mulinc"),
+                            sym -> value);
+                        $$ = sym -> value;
                       } else {
                         yyerror("Symbol not defined");
                       }
@@ -213,6 +220,7 @@ expression      : ID '=' expression
                     { struct Symbol *sym = symbol_lookup($1 -> identifier);
                       if (sym) {
                         sym -> value = LLVMBuildUDiv(builder, sym -> value, $3, "divinc");
+                        $$ = $3;
                       } else {
                         yyerror("Symbol not defined");
                       }
@@ -221,6 +229,7 @@ expression      : ID '=' expression
                     { struct Symbol *sym = symbol_lookup($1 -> identifier);
                       if (sym) {
                         sym -> value = LLVMBuildURem(builder, sym -> value, $3, "modinc");
+                        $$ = $3;
                       } else {
                         yyerror("Symbol not defined");
                       }
@@ -229,6 +238,7 @@ expression      : ID '=' expression
                     { struct Symbol *sym = symbol_lookup($1 -> identifier);
                       if (sym) {
                         sym -> value = LLVMBuildAnd(builder, sym -> value, $3, "andinc");
+                        $$ = $3;
                       } else {
                         yyerror("Symbol not defined");
                       }
@@ -237,6 +247,7 @@ expression      : ID '=' expression
                     { struct Symbol *sym = symbol_lookup($1 -> identifier);
                       if (sym) {
                         sym -> value = LLVMBuildXor(builder, sym -> value, $3, "xorinc");
+                        $$ = $3;
                       } else {
                         yyerror("Symbol not defined");
                       }
@@ -245,6 +256,7 @@ expression      : ID '=' expression
                     { struct Symbol *sym = symbol_lookup($1 -> identifier);
                       if (sym) {
                         sym -> value = LLVMBuildOr(builder, sym -> value, $3, "orinc");
+                        $$ = $3;
                       } else {
                         yyerror("Symbol not defined");
                       }
@@ -253,6 +265,7 @@ expression      : ID '=' expression
                     { struct Symbol *sym = symbol_lookup($1 -> identifier);
                       if (sym) {
                         sym -> value = LLVMBuildShl(builder, sym -> value, $3, "lshinc");
+                        $$ = $3;
                       } else {
                         yyerror("Symbol not defined");
                       }
@@ -261,6 +274,7 @@ expression      : ID '=' expression
                     { struct Symbol *sym = symbol_lookup($1 -> identifier);
                       if (sym) {
                         sym -> value = LLVMBuildLShr(builder, sym -> value, $3, "rshinc");
+                        $$ = $3;
                       } else {
                         yyerror("Symbol not defined");
                       }
@@ -274,7 +288,7 @@ expression      : ID '=' expression
                 | expression '&' expression
                     { $$ = LLVMBuildAnd(builder, $1, $3, "and"); }
                 | expression EQ  expression
-                    { $$ = LLVMBuildICmp(builder, LLVMIntEQ, LLVMConstInt(LLVMInt32Type(), 0, 0), LLVMConstInt(LLVMInt32Type(), 0, 0), "compeq"); }
+                    { $$ = LLVMBuildICmp(builder, LLVMIntEQ, $1, $3, "compeq"); }
                 | expression NE  expression
                     { $$ = LLVMBuildICmp(builder, LLVMIntNE, $1, $3, "compne"); }
                 | expression '<' expression
@@ -310,13 +324,19 @@ expression      : ID '=' expression
                 | '(' expression ')'
                     { $$ = $2; }
                 | '$' INT8
-                    { $$ = LLVMBuildAlloca(builder, LLVMInt32Type(), "var"); }
+                    {
+                      /* TODO: implement this */
+                      /*$$ = LLVMBuildAlloca(builder, LLVMInt8Type(), "load");*/
+                      /*LLVMBuildStore(builder, LLVMConstInt(LLVMInt8Type(), 0, 0), $$);*/
+                      $$ = LLVMConstInt(LLVMInt8Type(), 1, 0);
+                    }
                 | PP ID
                     { struct Symbol *sym = symbol_lookup($2 -> identifier);
                       if (sym) {
-                        LLVMValueRef val = LLVMConstInt(LLVMInt8Type(), 1, 0);
-                        sym -> value = LLVMBuildAdd(builder, sym -> value, val, "preinc");
-                        $$ = sym -> value;
+                        LLVMValueRef val1 = LLVMBuildLoad(builder, sym -> value, "load");
+                        LLVMValueRef val2 = LLVMConstInt(LLVMInt8Type(), 1, 0);
+                        $$ = LLVMBuildAdd(builder, val1, val2, "postdec");
+                        LLVMBuildStore(builder, $$, sym -> value);
                       } else {
                         yyerror("Symbol not defined");
                       }
@@ -324,9 +344,10 @@ expression      : ID '=' expression
                 | NN ID
                     { struct Symbol *sym = symbol_lookup($2 -> identifier);
                       if (sym) {
-                        LLVMValueRef val = LLVMConstInt(LLVMInt8Type(), 1, 0);
-                        sym -> value = LLVMBuildSub(builder, sym -> value, val, "predec");
-                        $$ = sym -> value;
+                        LLVMValueRef val1 = LLVMBuildLoad(builder, sym -> value, "load");
+                        LLVMValueRef val2 = LLVMConstInt(LLVMInt8Type(), 1, 0);
+                        $$ = LLVMBuildSub(builder, val1, val2, "postdec");
+                        LLVMBuildStore(builder, $$, sym -> value);
                       } else {
                         yyerror("Symbol not defined");
                       }
@@ -334,9 +355,10 @@ expression      : ID '=' expression
                 | ID PP
                     { struct Symbol *sym = symbol_lookup($1 -> identifier);
                       if (sym) {
-                        LLVMValueRef val = LLVMConstInt(LLVMInt8Type(), 1, 0);
-                        sym -> value = LLVMBuildAdd(builder, sym -> value, val, "postinc");
-                        $$ = sym -> value;
+                        LLVMValueRef val1 = LLVMBuildLoad(builder, sym -> value, "load");
+                        LLVMValueRef val2 = LLVMConstInt(LLVMInt8Type(), 1, 0);
+                        $$ = LLVMBuildAdd(builder, val1, val2, "postdec");
+                        LLVMBuildStore(builder, $$, sym -> value);
                       } else {
                         yyerror("Symbol not defined");
                       }
@@ -344,9 +366,10 @@ expression      : ID '=' expression
                 | ID NN
                     { struct Symbol *sym = symbol_lookup($1 -> identifier);
                       if (sym) {
-                        LLVMValueRef val = LLVMConstInt(LLVMInt8Type(), 1, 0);
-                        sym -> value = LLVMBuildSub(builder, sym -> value, val, "postdec");
-                        $$ = sym -> value;
+                        LLVMValueRef val1 = LLVMBuildLoad(builder, sym -> value, "load");
+                        LLVMValueRef val2 = LLVMConstInt(LLVMInt8Type(), 1, 0);
+                        $$ = LLVMBuildSub(builder, val1, val2, "postdec");
+                        LLVMBuildStore(builder, $$, sym -> value);
                       } else {
                         yyerror("Symbol not defined");
                       }
@@ -354,9 +377,9 @@ expression      : ID '=' expression
                 | ID
                     { struct Symbol *sym = symbol_lookup($1 -> identifier);
                       if (sym) {
-                        $$ = sym -> value;
+                        $$ = LLVMBuildLoad(builder, sym -> value, "load");
                       } else {
-                        yyerror("Not defined");
+                        yyerror("Symbol not defined");
                       }
                     }
                 | INT8
@@ -434,6 +457,7 @@ int main(int argc, char *argv[])
         yyparse();
 
         /* print to file */
+        LLVMDumpModule(module);
         LLVMPrintModuleToFile(module, filename, NULL);
 
         /* cleanup llvm */

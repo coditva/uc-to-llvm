@@ -30,7 +30,7 @@ ${PROGRAM}:		${OBJS} Makefile
 
 test: 			all
 				./test.sh
-				rm -r a.ll a.bc
+				rm -f a.ll a.bc
 
 clean:
 				rm -f ${OBJS} *.o ${PROGRAM} y.* lex.yy.* *.ll *.bc

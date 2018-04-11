@@ -36,6 +36,7 @@ struct Symbol * symbol_insert(const char *identifier, int token)
     new -> data = (struct Symbol *) malloc(sizeof(struct Symbol));
     new -> data -> identifier = strdup(identifier);
     new -> data -> token = token;
+    new -> data -> value = NULL;
     new -> next = NULL;
 
     if (symbols_list.start == NULL) {
