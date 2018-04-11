@@ -5,6 +5,11 @@ binary="./uc"
 exitcode=0
 verbose=1
 
+RED='\033[0;31m'
+GRN='\033[0;32m'
+NOC='\033[0m'
+
+
 function run_test() {
     rm -f a.ll a.bc
 
@@ -19,23 +24,16 @@ function run_test() {
     echo 0
 }
 
-if [[ $TEST != "" ]]; then
-    if [[ $(run_test $TEST) == 0 ]]; then
-        echo "[PASS] $TEST"
-        exitcode=0
-    else
-        echo "[FAIL] $TEST"
-        exitcode=1
-    fi
-    exit $exitcode
+if [[ $TEST != "" ]];
+then tests=$TEST
+else tests=$(ls $testdir); verbose=0
 fi
 
-for testfile in $(ls $testdir) ; do
-    verbose=0
+for testfile in $tests ; do
     if [[ $(run_test $testfile) == 0 ]]; then
-        echo "[PASS] $testfile"
+        echo -e "${GRN}[PASS]${NOC} $testfile"
     else
-        echo "[FAIL] $testfile"
+        echo -e "${RED}[FAIL]${NOC} $testfile"
         exitcode=1
     fi
 done
