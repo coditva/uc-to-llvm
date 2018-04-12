@@ -73,19 +73,12 @@ LLVMBasicBlockRef   entry;
 
 %token<sym> ID
 
-%token<num> INT8
-            INT16
-            INT32
-
-%token<val> FLT
-
-%token<val> STR
+%token<num> INT
 
 %type<val>  expression
 %type<blk>  statement statements
 %type<blk>  startthen startelse endif
 %type<blk>  startloop endloop forinc loopbody
-
 
 %%
 
@@ -176,11 +169,7 @@ statement   : ';'
               }
             | RETURN expression ';'
               {
-                /* cast retval to i32 */
-                LLVMValueRef retval =
-                    LLVMBuildSExt(builder, $2, LLVMInt32Type(), "retcast");
-
-                LLVMValueRef ret = LLVMBuildRet(builder, retval);
+                LLVMValueRef ret = LLVMBuildRet(builder, $2);
                 $$ = LLVMValueAsBasicBlock(ret);
                 returned = 1;
               }
@@ -384,19 +373,19 @@ expression  : ID '=' expression
               { $$ = LLVMBuildNeg(builder, $2, "neg"); }
             | '(' expression ')'
               { $$ = $2; }
-            | '$' INT8
+            | '$' INT
               {
-                /* TODO: implement this */
-                /*$$ = LLVMBuildAlloca(builder, LLVMInt8Type(), "load");*/
-                /*LLVMBuildStore(builder, LLVMConstInt(LLVMInt8Type(), 0, 0), $$);*/
-                $$ = LLVMConstInt(LLVMInt8Type(), 1, 0);
+                if ($2 > 2) yyerror("Too many arguments");
+                if ($2 < 0) yyerror("Wrong argument number");
+                LLVMValueRef val = LLVMGetParam(main_func, $2);
+                $$ = val;
               }
             | PP ID
               { struct Symbol *sym = symbol_lookup($2 -> identifier);
                 if (sym) {
                     LLVMValueRef val1 = LLVMBuildLoad(builder, sym -> value,
                             "load");
-                    LLVMValueRef val2 = LLVMConstInt(LLVMInt8Type(), 1, 0);
+                    LLVMValueRef val2 = LLVMConstInt(LLVMInt32Type(), 1, 0);
                     $$ = LLVMBuildAdd(builder, val1, val2, "postdec");
                     LLVMBuildStore(builder, $$, sym -> value);
                 } else {
@@ -408,7 +397,7 @@ expression  : ID '=' expression
                 if (sym) {
                     LLVMValueRef val1 = LLVMBuildLoad(builder, sym -> value,
                             "load");
-                    LLVMValueRef val2 = LLVMConstInt(LLVMInt8Type(), 1, 0);
+                    LLVMValueRef val2 = LLVMConstInt(LLVMInt32Type(), 1, 0);
                     $$ = LLVMBuildSub(builder, val1, val2, "postdec");
                     LLVMBuildStore(builder, $$, sym -> value);
                 } else {
@@ -420,7 +409,7 @@ expression  : ID '=' expression
                 if (sym) {
                     LLVMValueRef val1 = LLVMBuildLoad(builder, sym -> value,
                             "load");
-                    LLVMValueRef val2 = LLVMConstInt(LLVMInt8Type(), 1, 0);
+                    LLVMValueRef val2 = LLVMConstInt(LLVMInt32Type(), 1, 0);
                     $$ = LLVMBuildAdd(builder, val1, val2, "postdec");
                     LLVMBuildStore(builder, $$, sym -> value);
                 } else {
@@ -432,7 +421,7 @@ expression  : ID '=' expression
                 if (sym) {
                     LLVMValueRef val1 = LLVMBuildLoad(builder, sym -> value,
                             "load");
-                    LLVMValueRef val2 = LLVMConstInt(LLVMInt8Type(), 1, 0);
+                    LLVMValueRef val2 = LLVMConstInt(LLVMInt32Type(), 1, 0);
                     $$ = LLVMBuildSub(builder, val1, val2, "postdec");
                     LLVMBuildStore(builder, $$, sym -> value);
                 } else {
@@ -447,14 +436,8 @@ expression  : ID '=' expression
                     yyerror("Symbol not defined");
                 }
               }
-            | INT8
-              { $$ = LLVMConstInt(LLVMInt8Type(), $1, 0); }
-            | INT16
-              { $$ = LLVMConstInt(LLVMInt16Type(), $1, 0); }
-            | INT32
+            | INT
               { $$ = LLVMConstInt(LLVMInt32Type(), $1, 0); }
-            | FLT
-            | STR
             ;
 
 startthen   : /* empty */
@@ -512,9 +495,9 @@ int main(int argc, char *argv[])
         module = LLVMModuleCreateWithName("main");
 
         /* add a main function */
-        // TODO: add a argv type
-        LLVMTypeRef params_type[] = {LLVMInt32Type()};
-        LLVMTypeRef ret_type = LLVMFunctionType(LLVMInt32Type(), params_type, 1, 0);
+        LLVMTypeRef params_type[] = {LLVMInt32Type(), LLVMInt32Type(),
+                LLVMInt32Type()};
+        LLVMTypeRef ret_type = LLVMFunctionType(LLVMInt32Type(), params_type, 3, 1);
         main_func = LLVMAddFunction(module, "main", ret_type);
 
         /* add entry */

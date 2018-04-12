@@ -19,16 +19,17 @@ int             {digit}+
 token           [!$%&()*+,\-./:;<=>?\[\]^{|}~]
 
 %%
-
 [ \t\v\n\f\r]   /* skip whitespace */
-
 "//".*[\n]      /* skip comments */
-
-{id}    		{ return install_id(); }
-{int}   		{ return install_int(); }
-
-    /* TODO: add hex, oct, chr */
-
+{id}    		{
+                    yylval.sym = symbol_lookup(yytext);
+                    if (!yylval.sym) yylval.sym = symbol_insert(yytext, ID);
+                    return yylval.sym -> token;
+                }
+{int}   		{
+                    sscanf(yytext, "%u", &yylval.num);
+                    return INT;
+                }
 "+="  			{ return PA; }
 "-="  			{ return NA; }
 "*="  			{ return TA; }
@@ -49,34 +50,6 @@ token           [!$%&()*+,\-./:;<=>?\[\]^{|}~]
 ">>"  			{ return RS; }
 "++"  			{ return PP; }
 "--"  			{ return NN; }
-
 {token}         { return yytext[0]; }
 .               { yyerror("Unknown character found"); }
-
 %%
-
-static int install_id()
-{
-    yylval.sym = symbol_lookup(yytext);
-
-    if (!yylval.sym) {
-        yylval.sym = symbol_insert(yytext, ID);
-    }
-
-    return yylval.sym -> token;
-}
-
-static int install_int()
-{
-	sscanf(yytext, "%u", &yylval.num);
-
-	if (yylval.num < 128) {
-		return INT8;
-    }
-
-	if (yylval.num < 32368) {
-		return INT16;
-    }
-
-	return INT32;
-}
