@@ -83,7 +83,7 @@ LLVMBasicBlockRef   entry;
 %type<val>  expression
 %type<blk>  statement statements
 %type<blk>  startthen startelse endif
-%type<blk>  startwhile endwhile forinc
+%type<blk>  startloop endloop forinc loopbody
 
 
 %%
@@ -124,26 +124,31 @@ statement   : ';'
                 LLVMPositionBuilderAtEnd(builder, $7);
                 $$ = $7;
               }
-            | WHILE '(' expression ')' startwhile statement endwhile
+            | WHILE startloop '(' expression ')' loopbody statement endloop
               {
+                /* jump to loop */
                 LLVMPositionBuilderAtEnd(builder, entry);
-                LLVMBuildCondBr(builder, $3, $5, $7);
+                LLVMBuildBr(builder, $2);
+
+                /* add condition */
+                LLVMPositionBuilderAtEnd(builder, $2);
+                LLVMBuildCondBr(builder, $4, $6, $8);
 
                 /* check condition for while */
-                LLVMPositionBuilderAtEnd(builder, $5);
-                LLVMBuildCondBr(builder, $3, $5, $7);
+                LLVMPositionBuilderAtEnd(builder, $6);
+                LLVMBuildBr(builder, $2);
 
-                LLVMPositionBuilderAtEnd(builder, $7);
+                LLVMPositionBuilderAtEnd(builder, $8);
                 $$ = $7;
               }
-            | DO startwhile statement WHILE '(' expression ')' ';' endwhile
+            | DO startloop statement WHILE '(' expression ')' ';' endloop
               {
                 LLVMBuildCondBr(builder, $6, $2, $9);
                 LLVMPositionBuilderAtEnd(builder, $9);
                 $$ = $9;
               }
             | FOR '(' expression ';' expression ';' forinc expression ')'
-                    startwhile statement endwhile
+                    startloop statement endloop
               {
                 LLVMPositionBuilderAtEnd(builder, entry);
                 LLVMBuildCondBr(builder, $5, $10, $12);
@@ -357,9 +362,9 @@ expression  : ID '=' expression
             | expression '*' expression
               { $$ = LLVMBuildMul(builder, $1, $3, "mul"); }
             | expression '/' expression
-              { $$ = LLVMBuildUDiv(builder, $1, $3, "div"); }
+              { $$ = LLVMBuildSDiv(builder, $1, $3, "div"); }
             | expression '%' expression
-              { $$ = LLVMBuildURem(builder, $1, $3, "rem"); }
+              { $$ = LLVMBuildSRem(builder, $1, $3, "mod"); }
             | '!' expression
               { $$ = LLVMBuildNot(builder, $2, "not"); }
             | '~' expression
@@ -458,18 +463,24 @@ startelse   : /* empty */
 endif       : /* empty */
               { $$ = LLVMAppendBasicBlock(main_func, "endif"); }
             ;
-startwhile  : /* empty */
+startloop  : /* empty */
               {
-                $$ = LLVMAppendBasicBlock(main_func, "while");
+                $$ = LLVMAppendBasicBlock(main_func, "loop");
                 LLVMPositionBuilderAtEnd(builder, $$);
               }
             ;
-endwhile    : /* empty */
-              { $$ = LLVMAppendBasicBlock(main_func, "endwhile"); }
+endloop    : /* empty */
+              { $$ = LLVMAppendBasicBlock(main_func, "endloop"); }
             ;
 forinc      : /* empty */
               {
                 $$ = LLVMAppendBasicBlock(main_func, "forinc");
+                LLVMPositionBuilderAtEnd(builder, $$);
+              }
+            ;
+loopbody    : /* empty */
+              {
+                $$ = LLVMAppendBasicBlock(main_func, "loopbody");
                 LLVMPositionBuilderAtEnd(builder, $$);
               }
             ;
