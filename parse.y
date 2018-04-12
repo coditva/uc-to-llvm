@@ -187,8 +187,10 @@ expression  : ID '=' expression
               {
                 struct Symbol *sym = symbol_lookup($1 -> identifier);
                 if (!sym) yyerror("Symbol not found");
-                sym -> value = LLVMBuildAlloca(builder, LLVMTypeOf($3),
-                        $1 -> identifier);
+                if (!sym -> value) {
+                    sym -> value = LLVMBuildAlloca(builder, LLVMTypeOf($3),
+                            $1 -> identifier);
+                }
                 $$ = LLVMBuildStore(builder, $3, sym -> value);
               }
             | ID PA  expression
