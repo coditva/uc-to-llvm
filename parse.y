@@ -7,6 +7,7 @@
 extern int  yylex();
 extern int  yyerror(char *);
 extern FILE *yyin;
+static int returned = 0;
 
 LLVMBuilderRef      builder;
 LLVMModuleRef       module;
@@ -176,6 +177,7 @@ statement   : ';'
 
                 LLVMValueRef ret = LLVMBuildRet(builder, retval);
                 $$ = LLVMValueAsBasicBlock(ret);
+                returned = 1;
               }
             | BREAK ';'
               { $$ = LLVMValueAsBasicBlock(NULL); }
@@ -434,7 +436,7 @@ expression  : ID '=' expression
               }
             | ID
               { struct Symbol *sym = symbol_lookup($1 -> identifier);
-                if (sym) {
+                if (sym && sym -> value) {
                     $$ = LLVMBuildLoad(builder, sym -> value, "load");
                 } else {
                     yyerror("Symbol not defined");
@@ -520,6 +522,11 @@ int main(int argc, char *argv[])
         /* begin parsing */
         yyparse();
 
+        /* add return if not present */
+        if (!returned) {
+            LLVMBuildRet(builder, LLVMConstInt(LLVMInt32Type(), 1, 0));
+        }
+         
         /* print to file */
         LLVMDumpModule(module);
         LLVMPrintModuleToFile(module, filename, NULL);
