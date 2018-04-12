@@ -144,6 +144,11 @@ statement   : ';'
               }
             | DO startloop statement WHILE '(' expression ')' ';' endloop
               {
+                /* jump to loop */
+                LLVMPositionBuilderAtEnd(builder, entry);
+                LLVMBuildBr(builder, $2);
+
+                LLVMPositionBuilderAtEnd(builder, $2);
                 LLVMBuildCondBr(builder, $6, $2, $9);
                 LLVMPositionBuilderAtEnd(builder, $9);
                 $$ = $9;
