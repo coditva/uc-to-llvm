@@ -14,6 +14,7 @@ LLVMModuleRef       module;
 LLVMValueRef        main_func;
 LLVMBasicBlockRef   curr;
 LLVMBasicBlockRef   entry;
+LLVMValueRef        param;
 %}
 
 %union {
@@ -373,13 +374,6 @@ expression  : ID '=' expression
               { $$ = LLVMBuildNeg(builder, $2, "neg"); }
             | '(' expression ')'
               { $$ = $2; }
-            | '$' INT
-              {
-                if ($2 > 2) yyerror("Too many arguments");
-                if ($2 < 0) yyerror("Wrong argument number");
-                LLVMValueRef val = LLVMGetParam(main_func, $2);
-                $$ = val;
-              }
             | PP ID
               { struct Symbol *sym = symbol_lookup($2 -> identifier);
                 if (sym) {
@@ -427,6 +421,23 @@ expression  : ID '=' expression
                 } else {
                     yyerror("Symbol not defined");
                 }
+              }
+            | '$' INT
+              {
+                if ($2 < 0) yyerror("Wrong argument number");
+
+                /* get $2 param */
+                LLVMValueRef pos = LLVMConstInt(LLVMInt32Type(), $2, 0);
+                LLVMValueRef val = LLVMBuildInBoundsGEP(builder, param, &pos,
+                        1, "getparam");
+                val = LLVMBuildLoad(builder, val, "loadparam");
+
+                /* get $2[0] param and sign extend to i32 */
+                pos = LLVMConstInt(LLVMInt32Type(), 0, 0);
+                val = LLVMBuildInBoundsGEP(builder, val, &pos, 0, "getparam");
+                $$ = LLVMBuildSExt(builder,
+                        LLVMBuildLoad(builder, val, "loadparam"),
+                        LLVMInt32Type(), "sext");
               }
             | ID
               { struct Symbol *sym = symbol_lookup($1 -> identifier);
@@ -495,9 +506,10 @@ int main(int argc, char *argv[])
         module = LLVMModuleCreateWithName("main");
 
         /* add a main function */
-        LLVMTypeRef params_type[] = {LLVMInt32Type(), LLVMInt32Type(),
-                LLVMInt32Type()};
-        LLVMTypeRef ret_type = LLVMFunctionType(LLVMInt32Type(), params_type, 3, 1);
+        LLVMTypeRef params_type[] = { LLVMInt32Type(),
+                LLVMPointerType(LLVMPointerType(LLVMInt8Type(), 0), 0) };
+        LLVMTypeRef ret_type = LLVMFunctionType(LLVMInt32Type(),
+                params_type, 2, 0);
         main_func = LLVMAddFunction(module, "main", ret_type);
 
         /* add entry */
@@ -506,6 +518,15 @@ int main(int argc, char *argv[])
         /* add builder */
         builder = LLVMCreateBuilder();
         LLVMPositionBuilderAtEnd(builder, entry);
+
+        /* add params */
+        /*LLVMValueRef num_of_params = LLVMGetParam(main_func, 0);*/
+        LLVMValueRef params = LLVMGetParam(main_func, 1);
+        param = LLVMBuildAlloca(builder,
+                LLVMPointerType(LLVMPointerType(LLVMInt8Type(), 0), 0),
+                "params");
+        LLVMBuildStore(builder, params, param);
+        param = LLVMBuildLoad(builder, param, "params");
 
         /* begin parsing */
         yyparse();
