@@ -21,6 +21,7 @@ The *uC* is a subset of C with very basic functionality. The implemented
 version of *uC* supports the following:
 
 - All variable are of type `int32`.
+- Every statement ends with `;`.
 - Variable can be assigned as: `a = 10;` or `a = b;` given `b` is defined before
 - Arguments can be input as `a = $1;`.
 - There are _no_ functions. Everything is assumed to be in `main`.
@@ -28,7 +29,7 @@ version of *uC* supports the following:
 - `if (condition) { statements }`
 - `if (condition) { statements } else { statements }`
 - `while (condition) { statments }`
-- `for (expression, condition, expression) { statements }`
+- `for (expression; condition; expression) { statements }`
 - `do { statements } while (condition);`
 - If there is only one statement, `{` and `}` can be dropped.
 - Loops and conditional statements _cannot_ be nested.
